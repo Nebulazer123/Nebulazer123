@@ -12,9 +12,9 @@ ROOT = Path(__file__).resolve().parent
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
 
 FALLBACK = {
-    "repo_data": "22",
-    "star_data": "13",
-    "contrib_data": "319",
+    "repo_data": "11",
+    "star_data": "0",
+    "contrib_data": "328",
     "follower_data": "0",
     "following_data": "1",
     "since_data": "2016",
@@ -30,6 +30,8 @@ THEMES = {
         "key": "#953800", "value": "#0a3069", "muted": "#8c959f",
     },
 }
+
+DETAIL_X = 630
 
 
 def request_json(url: str, data: dict | None = None) -> dict | list:
@@ -94,25 +96,19 @@ def collect_stats() -> dict[str, str]:
 
 def field(y: int, label: str, value: str, dots: int) -> str:
     return (
-        f'<tspan x="505" y="{y}" class="cc">. </tspan>'
+        f'<tspan x="{DETAIL_X}" y="{y}" class="cc">. </tspan>'
         f'<tspan class="key">{escape(label)}</tspan>:'
         f'<tspan class="cc"> {"." * dots} </tspan>'
         f'<tspan class="value">{escape(value)}</tspan>'
     )
 
 
-def stat(y: int, left: tuple[str, str, int], right: tuple[str, str, int], values: dict[str, str]) -> str:
-    left_label, left_id, left_dots = left
-    right_label, right_id, right_dots = right
+def stat(y: int, label: str, element_id: str, value: str, dots: int) -> str:
     return (
-        f'<tspan x="505" y="{y}" class="cc">. </tspan>'
-        f'<tspan class="key">{left_label}</tspan>:'
-        f'<tspan class="cc" id="{left_id}_dots"> {"." * left_dots} </tspan>'
-        f'<tspan class="value" id="{left_id}">{values[left_id]}</tspan>'
-        f'<tspan> | </tspan>'
-        f'<tspan class="key">{right_label}</tspan>:'
-        f'<tspan class="cc" id="{right_id}_dots"> {"." * right_dots} </tspan>'
-        f'<tspan class="value" id="{right_id}">{values[right_id]}</tspan>'
+        f'<tspan x="{DETAIL_X}" y="{y}" class="cc">. </tspan>'
+        f'<tspan class="key">{escape(label)}</tspan>:'
+        f'<tspan class="cc" id="{element_id}_dots"> {"." * dots} </tspan>'
+        f'<tspan class="value" id="{element_id}">{escape(value)}</tspan>'
     )
 
 
@@ -121,46 +117,48 @@ def build_svg(theme: dict[str, str], values: dict[str, str]) -> str:
     if len(portrait) != 47 or max(map(len, portrait)) != 87:
         raise ValueError("portrait.txt must remain exactly 47 rows with an 87-character maximum")
 
+    # The source portrait is already vertically compressed for monospace output.
+    # Menlo/Consolas cells are still narrower in-browser than TextEdit's display,
+    # so the SVG widens only the rendered cells; the source characters stay exact.
     portrait_rows = "".join(
-        f'<tspan x="10" y="{18 + index * 14.45:.2f}">{escape(line)}</tspan>'
+        f'<tspan x="0" y="{18 + index * 13.6:.2f}">{escape(line)}</tspan>'
         for index, line in enumerate(portrait)
     )
 
     details = [
-        '<tspan x="505" y="27">corbin@nebulazer  ─────────────────────────────</tspan>',
-        field(55, "OS", "macOS · Windows", 11),
-        field(82, "Mac", 'MacBook Pro 16" · M4 Pro · 24 GB', 5),
-        field(109, "PC", "i7-9700 · RTX 2080 Super · 32 GB", 6),
-        field(136, "Title", "AI fellow · researcher · builder", 10),
-        field(163, "Editor", "Codex · VS Code", 8),
-        '<tspan x="505" y="198">- Work  ─────────────────────────────────────</tspan>',
-        field(226, "Languages.Programming", "Python · C++", 1),
-        field(253, "Tools", "Codex · Git · GitHub · APIs · MCP", 7),
-        field(280, "Focus", "Multi-agent orchestration", 7),
-        field(307, "Building", "Skill development · research automation", 4),
-        field(334, "Evaluation", "Models · data analysis", 2),
-        '<tspan x="505" y="369">- Hobbies  ──────────────────────────────────</tspan>',
-        field(397, "Hobbies.Software", "AI systems · automation · PKM", 1),
-        field(424, "Hobbies.Hardware", "PC building · display tuning", 1),
-        field(451, "Hobbies.Active", "Strength training · boxing", 1),
-        '<tspan x="505" y="486">- Contact  ──────────────────────────────────</tspan>',
-        field(514, "Website", "corbinfloyd.com", 5),
-        field(541, "GitHub", USERNAME, 7),
-        field(568, "Location", "Pensacola, Florida", 4),
-        '<tspan x="505" y="603">- GitHub Stats  ─────────────────────────────</tspan>',
-        stat(631, ("Repos", "repo_data", 4), ("Stars", "star_data", 3), values),
-        stat(658, ("Contribs", "contrib_data", 2), ("Followers", "follower_data", 1), values),
-        stat(685, ("Following", "following_data", 2), ("Since", "since_data", 1), values),
+        f'<tspan x="{DETAIL_X}" y="27">corbin@nebulazer  ──────────────────────</tspan>',
+        field(54, "OS", "macOS · Windows", 5),
+        field(79, "Mac", "M4 Pro · 24 GB", 5),
+        field(104, "PC", "i7-9700 · RTX 2080S · 32 GB", 4),
+        field(129, "Title", "AI fellow · researcher · builder", 3),
+        field(154, "Editor", "Codex · VS Code", 4),
+        f'<tspan x="{DETAIL_X}" y="188">- Work  ──────────────────────────────</tspan>',
+        field(214, "Languages", "Python · C++", 2),
+        field(239, "Tools", "Codex · Git · APIs · MCP", 3),
+        field(264, "Focus", "Multi-agent orchestration", 3),
+        field(289, "Building", "Skills · research automation", 2),
+        field(314, "Evaluation", "Models · data analysis", 1),
+        f'<tspan x="{DETAIL_X}" y="348">- Hobbies  ───────────────────────────</tspan>',
+        field(374, "Software", "AI systems · automation · PKM", 2),
+        field(399, "Hardware", "PC building · display tuning", 2),
+        field(424, "Active", "Strength training · boxing", 3),
+        f'<tspan x="{DETAIL_X}" y="458">- GitHub  ────────────────────────────</tspan>',
+        stat(484, "Repos", "repo_data", values["repo_data"], 3),
+        stat(509, "Stars", "star_data", values["star_data"], 3),
+        stat(534, "Contribs", "contrib_data", values["contrib_data"], 2),
+        stat(559, "Since", "since_data", values["since_data"], 3),
     ]
 
     return f'''<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="896" height="710" viewBox="0 0 896 710" preserveAspectRatio="xMinYMin meet" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="896" height="680" viewBox="0 0 896 680" preserveAspectRatio="xMinYMin meet" role="img" aria-labelledby="title desc">
 <title id="title">Corbin Floyd GitHub profile</title>
 <desc id="desc">ASCII portrait and terminal-style profile information for Corbin Floyd.</desc>
-<style>.key{{fill:{theme["key"]}}}.value{{fill:{theme["value"]}}}.cc{{fill:{theme["muted"]}}}text,tspan{{white-space:pre}}</style>
-<rect x=".5" y=".5" width="895" height="709" rx="15" fill="{theme["bg"]}" stroke="{theme["border"]}"/>
-<text fill="{theme["text"]}" font-family="Consolas,'Liberation Mono',Menlo,monospace" font-size="9px" xml:space="preserve">{portrait_rows}</text>
-<text fill="{theme["text"]}" font-family="Consolas,'Liberation Mono',Menlo,monospace" font-size="11.4px" xml:space="preserve">{"".join(details)}</text>
+<style>.key{{fill:{theme["key"]}}}.value{{fill:{theme["value"]}}}.cc{{fill:{theme["muted"]}}}text,tspan{{white-space:pre;font-variant-ligatures:none}}</style>
+<rect x=".5" y=".5" width="895" height="679" rx="15" fill="{theme["bg"]}" stroke="{theme["border"]}"/>
+<g transform="translate(8 0) scale(1.31 1)">
+<text fill="{theme["text"]}" font-family="Menlo,Monaco,Consolas,'Liberation Mono',monospace" font-size="9px" xml:space="preserve">{portrait_rows}</text>
+</g>
+<text fill="{theme["text"]}" font-family="Menlo,Monaco,Consolas,'Liberation Mono',monospace" font-size="9.4px" xml:space="preserve">{"".join(details)}</text>
 </svg>'''
 
 
