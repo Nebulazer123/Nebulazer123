@@ -1,16 +1,13 @@
-## Hi there 👋
-
 <!--
-**Nebulazer123/Nebulazer123** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
-
-Here are some ideas to get you started:
-
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
+Edit profile.json for the text panel.
+Edit ascii/light.txt and ascii/dark.txt for the portrait.
+Run: python build_profile.py --offline
+The GitHub Action refreshes public stats automatically.
 -->
+
+<a href="https://corbinfloyd.com">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Nebulazer123/Nebulazer123/main/dark_mode.svg">
+    <img alt="Corbin Floyd's GitHub profile README" src="https://raw.githubusercontent.com/Nebulazer123/Nebulazer123/main/light_mode.svg">
+  </picture>
+</a>
