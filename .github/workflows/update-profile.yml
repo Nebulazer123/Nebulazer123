@@ -4,12 +4,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "17 6 * * *"
-  push:
-    paths:
-      - "portrait.txt"
-      - "today.py"
-      - "README.md"
-      - ".github/workflows/update-profile.yml"
 
 permissions:
   contents: write
