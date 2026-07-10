@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" font-family="Consolas, 'Liberation Mono', monospace" width="985px" height="530px" font-size="16px">
+<style>.key{fill:#ffa657}.value{fill:#a5d6ff}.muted{fill:#616e7f}.accent{fill:#d2a8ff}text,tspan{white-space:pre}</style>
+<rect width="985" height="530" fill="#161b22" rx="15"/>
+<text x="15" y="30" fill="#c9d1d9"><tspan x="15" y="30">                   ..... #.:                </tspan>
+<tspan x="15" y="50">           .:..::##BGPGBGBPPG55YYG:         </tspan>
+<tspan x="15" y="70">        GP5G5GP55PP?JJJYPPGBGB##PPY:..      </tspan>
+<tspan x="15" y="90">      .G5YP5?JY55Y???77J?JJPYY5P5Y5GBB::.   </tspan>
+<tspan x="15" y="110">     :PPY5Y?!!~!7!!?7???J7?777777~?7YY5PBB  </tspan>
+<tspan x="15" y="130">  P:#BPJYY!7~^~!~~!J7?7J?!J!7!~!7!^~?YP5GB: </tspan>
+<tspan x="15" y="150">  .BPYJ??J!~!~~~7?!~7JJYJYPP5J7!~~.~?JYG#:.:</tspan>
+<tspan x="15" y="170"> .PJ?J7~~~~~~~~?JJ5YPBB###&amp;@@&amp;B5?!!?~!?!7JP:</tspan>
+<tspan x="15" y="190"> .B5??7!!7777775YYPGB##&amp;&amp;&amp;@@@@@&amp;BY?J!?!~!75:</tspan>
+<tspan x="15" y="210">..P5J?!77!?YJBBB#&amp;#B#&amp;&amp;@@@@@@@@@&amp;G??J77?JPG.</tspan>
+<tspan x="15" y="230">  :PY?!!!75GP55555B&amp;&amp;@@&amp;#PJ7?JY5G&amp;PJJJ7??5B.</tspan>
+<tspan x="15" y="250"> .:5J!~^.?5JY55Y??JYB&amp;&amp;B5JJYPB#BG#G7??!7JG#.</tspan>
+<tspan x="15" y="270">.:PP77~..?G#GY57!55B#@@&amp;B5G??GPB@@G7??JYG#B </tspan>
+<tspan x="15" y="290"> .:J~~~7~P&amp;&amp;&amp;&amp;&amp;#####&amp;@@@@@&amp;&amp;&amp;&amp;@@@@@B5?Y5B.  </tspan>
+<tspan x="15" y="310">   P:PJ5P#&amp;&amp;@@@@@&amp;&amp;&amp;&amp;@@@@@&amp;&amp;@@@@@@&amp;#7!5G..  </tspan>
+<tspan x="15" y="330">    .5~!GB&amp;&amp;@@@&amp;&amp;&amp;BGG###BG&amp;&amp;#&amp;&amp;@@@@@7JP     </tspan>
+<tspan x="15" y="350">     :5^##&amp;#&amp;&amp;B##BGGGGBGB###&amp;B&amp;@&amp;@PPGP.     </tspan>
+<tspan x="15" y="370">      .J7J#B#&amp;#G5PBBBGGGBBBGB&amp;@&amp;&amp;@^~^~~.    </tspan>
+<tspan x="15" y="390">        ..:B#B&amp;&amp;&amp;&amp;########&amp;@@&amp;&amp;&amp;&amp;!^~^..^!!!:</tspan>
+<tspan x="15" y="410">           .####&amp;&amp;@@&amp;###&amp;&amp;@@@&amp;&amp;?^^~~..^~^~^~</tspan>
+<tspan x="15" y="430">            ..J##&amp;@@@@@@@@@@BJ..^~^..~~~~~^^</tspan>
+<tspan x="15" y="450">            ^..?BGB#&amp;#&amp;##BG5?.^^^..^~^~^~^~^</tspan>
+<tspan x="15" y="470">           !....7BGBBBPPPPPY.^^^..^~~~^^^^^^</tspan>
+<tspan x="15" y="490">         :7^.....?BGGPGGBBP.^~...^^^~~^^...^</tspan>
+<tspan x="15" y="510">       .^^~.......5BGGGPJ7~.~^..^^~^~~^...^^</tspan></text>
+<text x="420" y="30" fill="#c9d1d9"><tspan x="420" y="30">corbin@nebulazer</tspan> <tspan class="muted">-————————————————————————————————————-</tspan>
+<tspan x="420" y="50" class="muted">. </tspan><tspan class="key">OS</tspan>:<tspan class="muted"> ............................................. </tspan><tspan class="value">macOS Tahoe</tspan>
+<tspan x="420" y="70" class="muted">. </tspan><tspan class="key">Uptime</tspan>:<tspan class="muted"> ........................ </tspan><tspan class="value">22 years, 11 months, 19 days</tspan>
+<tspan x="420" y="90" class="muted">. </tspan><tspan class="key">Host</tspan>:<tspan class="muted"> .................. </tspan><tspan class="value">MacBook Pro 16-inch · M4 Pro · 24 GB</tspan>
+<tspan x="420" y="110" class="muted">. </tspan><tspan class="key">Kernel</tspan>:<tspan class="muted"> ................ </tspan><tspan class="value">AI contractor · researcher · builder</tspan>
+<tspan x="420" y="130" class="muted">. </tspan><tspan class="key">IDE</tspan>:<tspan class="muted"> ........................................ </tspan><tspan class="value">Codex · VS Code</tspan>
+<tspan x="420" y="150" class="muted">. </tspan>
+<tspan x="420" y="170" class="muted">. </tspan><tspan class="key">Languages.Programming</tspan>:<tspan class="muted"> ............ </tspan><tspan class="value">Python · SQL · JavaScript</tspan>
+<tspan x="420" y="190" class="muted">. </tspan><tspan class="key">Languages.Computer</tspan>:<tspan class="muted"> ..... </tspan><tspan class="value">HTML · CSS · JSON · YAML · Markdown</tspan>
+<tspan x="420" y="210" class="muted">. </tspan><tspan class="key">Tools</tspan>:<tspan class="muted"> ................ </tspan><tspan class="value">Git · GitHub · ChatGPT · Claude · MCP</tspan>
+<tspan x="420" y="230" class="muted">. </tspan><tspan class="key">Focus</tspan>:<tspan class="muted"> ....... </tspan><tspan class="value">AI agents · evaluation · research · automation</tspan>
+<tspan x="420" y="250" class="muted">. </tspan>
+<tspan x="420" y="270" class="muted">. </tspan><tspan class="key">Building</tspan>:<tspan class="muted"> .................. </tspan><tspan class="value">AgentIntelligence · skill-finder</tspan>
+<tspan x="420" y="290" class="muted">. </tspan><tspan class="key">Researching</tspan>:<tspan class="muted"> .. </tspan><tspan class="value">Memory · retrieval · orchestration · governance</tspan>
+<tspan x="420" y="310">- Contact</tspan> <tspan class="muted">-——————————————————————————————-</tspan>
+<tspan x="420" y="330" class="muted">. </tspan><tspan class="key">Website</tspan>:<tspan class="muted"> .................................... </tspan><tspan class="value">corbinfloyd.com</tspan>
+<tspan x="420" y="350" class="muted">. </tspan><tspan class="key">GitHub</tspan>:<tspan class="muted"> ........................................ </tspan><tspan class="value">Nebulazer123</tspan>
+<tspan x="420" y="370" class="muted">. </tspan><tspan class="key">Location</tspan>:<tspan class="muted"> ................................ </tspan><tspan class="value">Pensacola, Florida</tspan>
+<tspan x="420" y="390" class="muted">. </tspan>
+<tspan x="420" y="410">- GitHub Stats</tspan> <tspan class="muted">-——————————————————————————-</tspan>
+<tspan x="420" y="430" class="muted">. </tspan><tspan class="key">Public Repos</tspan>:<tspan class="muted"> ............... </tspan><tspan class="value">11</tspan> <tspan class="muted">| </tspan><tspan class="key">Stars</tspan>:<tspan class="muted"> ............... </tspan><tspan class="value">13</tspan>
+<tspan x="420" y="450" class="muted">. </tspan><tspan class="key">Contributed</tspan>:<tspan class="muted"> ................. </tspan><tspan class="value">0</tspan> <tspan class="muted">| </tspan><tspan class="key">Followers</tspan>:<tspan class="muted"> ............ </tspan><tspan class="value">0</tspan>
+<tspan x="420" y="470" class="muted">. </tspan><tspan class="key">Contributions.2026</tspan>:<tspan class="muted"> ....................................... </tspan><tspan class="value">0</tspan>
+<tspan x="420" y="490" class="muted">. </tspan><tspan class="key">Updated</tspan>:<tspan class="muted"> ..................................... </tspan><tspan class="value">2026-07-10 UTC</tspan>
+<tspan x="420" y="510" class="accent" font-size="12px">Superpowers upgrades the worker. AgentIntelligence upgrades the workplace.</tspan></text>
+</svg>
