@@ -13,16 +13,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-python@v6
         with:
           python-version: "3.x"
-
       - name: Refresh public GitHub statistics
         run: python today.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Commit changes
         run: |
           if [[ -n "$(git status --porcelain)" ]]; then

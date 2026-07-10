@@ -13,22 +13,22 @@ SVG_FILES = (ROOT / "dark_mode.svg", ROOT / "light_mode.svg")
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
 
 FALLBACK = {
-    "repo_data": "9",
+    "repo_data": "22",
     "star_data": "13",
-    "contrib_data": "304",
+    "contrib_data": "316",
     "follower_data": "0",
     "following_data": "1",
     "since_data": "2016",
 }
 
 DOT_WIDTHS = {
-    "repo_data": 11,
-    "star_data": 8,
-    "contrib_data": 5,
-    "follower_data": 4,
-    "following_data": 7,
-    "since_data": 5,
-    "updated_data": 25,
+    "repo_data": 6,
+    "star_data": 5,
+    "contrib_data": 3,
+    "follower_data": 2,
+    "following_data": 3,
+    "since_data": 3,
+    "updated_data": 12,
 }
 
 def request_json(url: str, data: dict | None = None) -> dict | list:
