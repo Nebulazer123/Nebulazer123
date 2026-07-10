@@ -156,7 +156,7 @@ def build_svg(theme: dict[str, str], values: dict[str, str]) -> str:
         field(210, "Focus", "Multi-agent orchestration", 8),
         field(230, "Building", "Skills, research automation", 5),
         field(250, "Hobbies.Software", "AI systems, automation, PKM", 2),
-        field(270, "Hobbies.Hardware", "PC building, display tuning", 2),
+        field(270, "Hobbies.Hardware", "PC building, engine tuning", 2),
         field(290, "Hobbies.Active", "Strength training, boxing", 3),
         header(310, "Contact", 34),
         field(330, "Website", "corbinfloyd.com", 12),
