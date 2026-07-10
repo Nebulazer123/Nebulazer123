@@ -4,6 +4,12 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "17 6 * * *"
+  push:
+    paths:
+      - "portrait.txt"
+      - "today.py"
+      - "README.md"
+      - ".github/workflows/update-profile.yml"
 
 permissions:
   contents: write
@@ -13,19 +19,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
       - uses: actions/setup-python@v6
         with:
           python-version: "3.x"
-      - name: Refresh public GitHub statistics
+
+      - name: Build profile and refresh public statistics
         run: python today.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Commit changes
+
+      - name: Commit generated cards
         run: |
           if [[ -n "$(git status --porcelain)" ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add dark_mode.svg light_mode.svg
-            git commit -m "Update profile stats"
+            git commit -m "Update profile card"
             git push
           fi
