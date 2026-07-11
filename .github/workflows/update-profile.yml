@@ -11,6 +11,7 @@ on:
       - "portrait_light.txt"
       - "portrait_dark.txt"
       - "today.py"
+      - "update_contributions.py"
       - ".github/workflows/update-profile.yml"
 
 permissions:
@@ -26,7 +27,9 @@ jobs:
         with:
           python-version: "3.x"
       - name: Build both themes and refresh profile statistics
-        run: python today.py
+        run: |
+          python today.py
+          python update_contributions.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Commit generated cards
