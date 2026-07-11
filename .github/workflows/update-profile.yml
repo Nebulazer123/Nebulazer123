@@ -8,7 +8,7 @@ on:
     branches:
       - main
     paths:
-      - "portrait.txt"
+      - "portrait_light.txt"
       - "today.py"
       - "README.md"
       - ".github/workflows/update-profile.yml"
@@ -24,16 +24,16 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.x"
-      - name: Build profile and refresh public statistics
+      - name: Build light profile and refresh GitHub statistics
         run: python today.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Commit generated cards
+      - name: Commit generated light card
         run: |
-          if [[ -n "$(git status --porcelain)" ]]; then
+          if [[ -n "$(git status --porcelain light_mode.svg)" ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add dark_mode.svg light_mode.svg
-            git commit -m "Update profile card"
+            git add light_mode.svg
+            git commit -m "Update light profile card"
             git push
           fi
