@@ -4,8 +4,8 @@ import calendar
 import datetime as dt
 import json
 import os
-import re
 import urllib.request
+from html import escape
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -13,7 +13,52 @@ USERNAME = "Nebulazer123"
 ROOT = Path(__file__).resolve().parent
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
 BIRTH_TIME = dt.datetime(2003, 7, 21, 3, 0, tzinfo=ZoneInfo("America/Chicago"))
-SVG_FILES = (ROOT / "light_mode.svg", ROOT / "dark_mode.svg")
+DETAIL_X = 410
+
+THEMES = {
+    "light_mode.svg": {
+        "mode": "light",
+        "portrait": "portrait_light.txt",
+        "bg": "#f6f8fa",
+        "border": "#d0d7de",
+        "text": "#24292f",
+        "portrait_text": "#4f5660",
+        "portrait_stroke": "#4f5660",
+        "portrait_stroke_width": "0.16",
+        "key": "#d46a00",
+        "value": "#0969da",
+        "add": "#1a7f37",
+        "delete": "#cf222e",
+        "muted": "#8c959f",
+    },
+    "dark_mode.svg": {
+        "mode": "dark",
+        "portrait": "portrait_dark.txt",
+        "bg": "#161b22",
+        "border": "#30363d",
+        "text": "#d6d9df",
+        "portrait_text": "#d6d9df",
+        "portrait_stroke": "#d6d9df",
+        "portrait_stroke_width": "0.18",
+        "key": "#ffa657",
+        "value": "#a5d6ff",
+        "add": "#3fb950",
+        "delete": "#f85149",
+        "muted": "#6e7681",
+    },
+}
+
+FALLBACK = {
+    "repos": 12,
+    "contributed": 12,
+    "stars": 0,
+    "commits": 233,
+    "followers": 0,
+    "loc_add": 288353,
+    "loc_del": 68804,
+    "loc_net": 219549,
+    "since": "2016",
+}
 
 
 def request_json(url: str, payload: dict | None = None) -> dict | list:
@@ -59,32 +104,12 @@ def uptime_string(now: dt.datetime | None = None) -> str:
     if cursor > now:
         years -= 1
         cursor = BIRTH_TIME.replace(year=BIRTH_TIME.year + years)
-
     months = 0
     while add_months(cursor, months + 1) <= now:
         months += 1
     cursor = add_months(cursor, months)
     days = (now - cursor).days
     return f"{years}yrs, {months} months, {days}days"
-
-
-def existing_value(element_id: str, default: int | str) -> int | str:
-    pattern = re.compile(
-        rf'<tspan[^>]*id="{re.escape(element_id)}"[^>]*>(.*?)</tspan>',
-        re.DOTALL,
-    )
-    for path in SVG_FILES:
-        if not path.exists():
-            continue
-        match = pattern.search(path.read_text(encoding="utf-8"))
-        if not match:
-            continue
-        raw = re.sub(r"<[^>]+>", "", match.group(1)).strip()
-        number = re.sub(r"[^0-9-]", "", raw)
-        if isinstance(default, int) and number:
-            return int(number)
-        return raw or default
-    return default
 
 
 def repository_overview() -> tuple[str, str, list[dict], int]:
@@ -178,18 +203,8 @@ def commit_and_loc_for_repo(owner: str, name: str, user_id: str) -> tuple[int, i
 
 
 def collect_stats() -> dict[str, int | str | None]:
-    values: dict[str, int | str | None] = {
-        "repos": existing_value("repo_data", 12),
-        "contributed": existing_value("contrib_data", 12),
-        "stars": existing_value("star_data", 0),
-        "commits": existing_value("commit_data", 233),
-        "followers": existing_value("follower_data", 0),
-        "loc_add": existing_value("loc_add", 288353),
-        "loc_del": existing_value("loc_del", 68804),
-        "loc_net": existing_value("loc_data", 219549),
-        "since": existing_value("since_data", "2016"),
-        "annual_contributions": None,
-    }
+    values: dict[str, int | str | None] = dict(FALLBACK)
+    values["annual_contributions"] = None
 
     try:
         profile = request_json(f"https://api.github.com/users/{USERNAME}")
@@ -241,45 +256,122 @@ def collect_stats() -> dict[str, int | str | None]:
     return values
 
 
-def replace_id(text: str, element_id: str, value: str) -> str:
-    pattern = re.compile(
-        rf'(<tspan[^>]*id="{re.escape(element_id)}"[^>]*>)(.*?)(</tspan>)',
-        re.DOTALL,
+def tspan(x: int | str, y: str, content: str) -> str:
+    return f'<tspan x="{x}" y="{y}">{content}</tspan>'
+
+
+def cls(name: str, text: str) -> str:
+    return f'<tspan class="{name}">{escape(text)}</tspan>'
+
+
+def build_portrait(path: Path) -> str:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if len(lines) != 36 or max(map(len, lines)) > 51:
+        raise ValueError(f"{path.name} must remain 36 rows and at most 51 characters wide")
+    step = 480 / (len(lines) - 1)
+    return "".join(
+        f'<tspan x="18" y="{30 + index * step:.2f}">{escape(line)}</tspan>'
+        for index, line in enumerate(lines)
     )
-    updated, count = pattern.subn(rf"\g<1>{value}\g<3>", text, count=1)
-    if count != 1:
-        raise RuntimeError(f"Expected exactly one {element_id} element")
-    return updated
 
 
-def update_svg(path: Path, values: dict[str, int | str | None]) -> None:
-    text = path.read_text(encoding="utf-8")
-    replacements = {
-        "uptime_data": str(values["uptime"]),
-        "repo_data": f"{int(values['repos']):d}",
-        "contrib_data": f"{int(values['contributed']):5d}",
-        "star_data": f"{int(values['stars']):d}",
-        "commit_data": f"{int(values['commits']):5d}",
-        "follower_data": f"{int(values['followers']):d}",
-        "loc_data": f"  {int(values['loc_net']):,} ",
-        "loc_add": f" ({int(values['loc_add']):,}++",
-        "loc_del": f"  {int(values['loc_del']):,}--",
-        "updated_data": str(values["updated"]),
-        "since_data": str(values["since"]),
-    }
-    for element_id, value in replacements.items():
-        text = replace_id(text, element_id, value)
-    path.write_text(text, encoding="utf-8")
+def build_panel(values: dict[str, int | str | None]) -> str:
+    rows: list[str] = []
+    rows.append(tspan(410, "30.00", "corbin@nebulazer " + "─" * 44))
+    rows.append(tspan(410, "48.46", f'{cls("cc", ". ")}{cls("key", "OS")}: {cls("cc", "." * 35 + " ")}{cls("value", "macOS, Windows, iOS")}'))
+    rows.append(tspan(410, "66.92", f'{cls("cc", ". ")}{cls("key", "Uptime")}: {cls("cc", "." * 26 + " ")}{cls("value", str(values["uptime"]))}'))
+    rows.append(tspan(410, "85.38", f'{cls("cc", ". ")}{cls("key", "Host")}: {cls("cc", "." * 40 + " ")}{cls("value", "Handshake AI")}'))
+    rows.append(tspan(410, "103.85", f'{cls("cc", ". ")}{cls("key", "Title")}: {cls("cc", "." * 21 + " ")}{cls("value", "AI Fellow, Researcher, builder")}'))
+    rows.append(tspan(410, "122.31", f'{cls("cc", ". ")}{cls("key", "IDE")}: {cls("cc", "." * 33)}{cls("value", "Codex, VS Code, Xcode")}'))
+    rows.append(tspan(410, "140.77", cls("cc", ". ")) + " " + "–" * 57)
+    rows.append(tspan(410, "159.23", f'{cls("cc", ". ")}{cls("key", "Aspiring Role")}: {cls("cc", "." * 15 + " ")}{cls("value", "Forward Development Engineer")}'))
+    rows.append(tspan(410, "177.69", f'{cls("cc", ". ")}{cls("key", "Languages.Programming")}: {cls("cc", "." * 24 + " ")}{cls("value", "Python, C++")}'))
+    rows.append(tspan(410, "196.15", f'{cls("cc", ". ")}{cls("key", "Tools")}: {cls("cc", "." * 22 + " ")}{cls("value", "Codex, Git, GitHub, APIs, MCP")}'))
+    rows.append(tspan(410, "214.62", cls("cc", ". ")) + " " + "–" * 57)
+    rows.append(tspan(410, "233.08", f'{cls("cc", ". ")}{cls("key", "Projects")}: {cls("cc", "." * 20 + " ")}{cls("value", "Agentelligence, Skill-Finder")}'))
+    rows.append(tspan(410, "251.54", f'{cls("cc", ". ")}{cls("key", "Focus")}: {cls("cc", "." * 26 + " ")}{cls("value", "Multi-agent orchestration")}'))
+    rows.append(tspan(410, "270.00", f'{cls("cc", ". ")}{cls("key", "Building")}: {cls("cc", "." * 15 + " ")}{cls("value", "SKILLS.md, Methodology Frameworks")}'))
+    rows.append(tspan(410, "288.46", f'{cls("cc", ". ")}{cls("key", "Hobbies.Software")}: {cls("cc", "." * 17 + " ")}{cls("value", "AI systems, coding, PKM")}'))
+    rows.append(tspan(410, "306.92", f'{cls("cc", ". ")}{cls("key", "Hobbies.Hardware")}: {cls("cc", "." * 15)}{cls("value", "PC building, engine tuning")}'))
+    rows.append(tspan(410, "325.38", f'{cls("cc", ". ")}{cls("key", "Lifestyle Hobbies")}: {cls("cc", "." * 10 + " ")}{cls("value", "Strength training, kickboxing")}'))
+    rows.append(tspan(410, "343.85", cls("cc", ". ")))
+    rows.append(tspan(410, "362.31", "- Contact " + "─" * 36 + "–" * 12 + "─" * 3))
+    rows.append(tspan(410, "380.77", f'{cls("cc", ". ")}{cls("key", "Work Email")}: {cls("cc", "." * 22 + " ")}{cls("value", "thecorbinfloyd@gmail.com")}'))
+    rows.append(tspan(410, "399.23", f'{cls("cc", ". ")}{cls("key", "LinkedIn")}: {cls("cc", "." * 26 + " ")}{cls("value", "corbin-floyd-000b22275")}'))
+    rows.append(tspan(410, "417.69", cls("cc", ". ")))
+    rows.append(tspan(410, "436.15", "- GitHub Stats " + "─" * 34 + "–" * 12))
+
+    rows.append(
+        tspan(410, "454.62", f'{cls("cc", ". ")}{cls("key", "Repos")}:')
+        + tspan(472, "454.62", cls("cc", " .... "))
+        + tspan(510, "454.62", cls("value", str(values["repos"])))
+        + tspan(545, "454.62", f'    {{{cls("key", "Contributed")}:')
+        + tspan(669, "454.62", cls("value", f'{int(values["contributed"]):5d}'))
+        + tspan(710, "454.62", "}")
+        + tspan(720, "454.62", "|")
+        + tspan(744, "454.62", f'{cls("key", "Stars")}:')
+        + tspan(802, "454.62", cls("cc", "." * 14))
+        + tspan(925, "454.62", cls("value", str(values["stars"])))
+    )
+    rows.append(
+        tspan(410, "473.08", f'{cls("cc", ". ")}{cls("key", "Commits")}:')
+        + tspan(488, "473.08", cls("cc", "." * 21))
+        + tspan(675, "473.08", cls("value", f'{int(values["commits"]):5d}'))
+        + tspan(720, "473.08", "|")
+        + tspan(744, "473.08", f'{cls("key", "Followers")}:')
+        + tspan(838, "473.08", cls("cc", "." * 10))
+        + tspan(925, "473.08", cls("value", str(values["followers"])))
+    )
+    rows.append(
+        tspan(410, "491.54", f'{cls("cc", ". ")}{cls("key", "Lines of Code on GitHub")}:')
+        + tspan(642, "491.54", cls("value", f'  {int(values["loc_net"]):,} '))
+        + tspan(711, "491.54", " | ")
+        + tspan(730, "491.54", cls("addColor", f' ({int(values["loc_add"]):,}++'))
+        + tspan(812, "491.54", "  ,")
+        + tspan(829, "491.54", cls("delColor", f'  {int(values["loc_del"]):,}--'))
+        + tspan(899, "491.54", "  )")
+    )
+    rows.append(
+        tspan(410, "510.00", f'{cls("cc", ". ")}{cls("key", "Updated")}:')
+        + tspan(500, "510.00", cls("cc", "." * 17))
+        + tspan(650, "510.00", cls("value", str(values["updated"])))
+        + tspan(720, "510.00", "|")
+        + tspan(744, "510.00", f'{cls("key", "Since")}:')
+        + tspan(805, "510.00", cls("cc", "." * 9))
+        + tspan(905, "510.00", cls("value", str(values["since"])))
+    )
+    return "".join(rows)
+
+
+def build_svg(filename: str, theme: dict[str, str], values: dict[str, int | str | None]) -> str:
+    portrait_rows = build_portrait(ROOT / theme["portrait"])
+    return f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="985" height="530" viewBox="0 0 985 530" role="img" aria-labelledby="title desc">
+<title id="title">Corbin Floyd GitHub profile card - {theme["mode"]} mode</title>
+<desc id="desc">{theme["mode"].capitalize()}-mode ASCII portrait and aligned terminal-style profile details.</desc>
+<style>
+@font-face {{ src: local("SF Mono"), local("SFMono-Regular"), local("Menlo"), local("Consolas"); font-family: "ProfileMono"; font-display: swap; }}
+text, tspan {{ white-space: pre; font-variant-ligatures: none; }}
+.key {{ fill: {theme["key"]}; }}
+.value {{ fill: {theme["value"]}; }}
+.addColor {{ fill: {theme["add"]}; }}
+.delColor {{ fill: {theme["delete"]}; }}
+.cc {{ fill: {theme["muted"]}; }}
+</style>
+<rect x="0.5" y="0.5" width="984" height="529" rx="15" fill="{theme["bg"]}" stroke="{theme["border"]}"/>
+<text x="18" y="30" fill="{theme["portrait_text"]}" xml:space="preserve" font-family="ProfileMono, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="12.9px" font-weight="500" font-variant-ligatures="none" text-rendering="geometricPrecision" stroke="{theme["portrait_stroke"]}" stroke-width="{theme["portrait_stroke_width"]}" paint-order="stroke fill">{portrait_rows}</text>
+<text x="410" y="30" fill="{theme["text"]}" xml:space="preserve" font-family="ProfileMono, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="14.2px" font-weight="500">{build_panel(values)}</text>
+</svg>'''
 
 
 def main() -> None:
     values = collect_stats()
-    for svg in SVG_FILES:
-        update_svg(svg, values)
+    for filename, theme in THEMES.items():
+        (ROOT / filename).write_text(build_svg(filename, theme, values), encoding="utf-8")
     print(json.dumps(values, indent=2))
     print(
         "Note: 'Contributed' is the Andrew-style count of public affiliated "
-        "repositories. annual_contributions is the rolling 365-day activity count."
+        "repositories; annual_contributions is the rolling 365-day activity count."
     )
 
 
