@@ -107,16 +107,15 @@ def repository_overview() -> tuple[str, str, list[dict]]:
 
 def commit_and_loc_for_repo(owner: str, name: str, user_id: str) -> tuple[int, int, int]:
     query = """
-    query($owner: String!, $name: String!, $cursor: String) {
+    query($owner: String!, $name: String!, $cursor: String, $author: ID!) {
       repository(owner: $owner, name: $name) {
         defaultBranchRef {
           target {
             ... on Commit {
-              history(first: 100, after: $cursor) {
+              history(first: 100, after: $cursor, author: {id: $author}) {
                 nodes {
                   additions
                   deletions
-                  author { user { id } }
                 }
                 pageInfo { hasNextPage endCursor }
               }
@@ -131,18 +130,15 @@ def commit_and_loc_for_repo(owner: str, name: str, user_id: str) -> tuple[int, i
     while True:
         data = graphql(
             query,
-            {"owner": owner, "name": name, "cursor": cursor},
+            {"owner": owner, "name": name, "cursor": cursor, "author": user_id},
         )["repository"]
         if not data or not data.get("defaultBranchRef"):
             return commits, additions, deletions
         history = data["defaultBranchRef"]["target"]["history"]
         for node in history["nodes"]:
-            author = node.get("author") or {}
-            user = author.get("user") or {}
-            if user.get("id") == user_id:
-                commits += 1
-                additions += int(node.get("additions") or 0)
-                deletions += int(node.get("deletions") or 0)
+            commits += 1
+            additions += int(node.get("additions") or 0)
+            deletions += int(node.get("deletions") or 0)
         if not history["pageInfo"]["hasNextPage"]:
             return commits, additions, deletions
         cursor = history["pageInfo"]["endCursor"]
