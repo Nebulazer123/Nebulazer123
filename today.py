@@ -4,27 +4,16 @@ import calendar
 import datetime as dt
 import json
 import os
+import re
 import urllib.request
-from html import escape
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 USERNAME = "Nebulazer123"
 ROOT = Path(__file__).resolve().parent
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
-DETAIL_X = 410
 BIRTH_TIME = dt.datetime(2003, 7, 21, 3, 0, tzinfo=ZoneInfo("America/Chicago"))
-
-FALLBACK = {
-    "repos": 12,
-    "contributed": 12,
-    "stars": 0,
-    "commits": 343,
-    "loc_add": 0,
-    "loc_del": 0,
-    "loc_net": 0,
-    "since": "2016",
-}
+SVG_FILES = (ROOT / "light_mode.svg", ROOT / "dark_mode.svg")
 
 
 def request_json(url: str, payload: dict | None = None) -> dict | list:
@@ -44,15 +33,15 @@ def request_json(url: str, payload: dict | None = None) -> dict | list:
 
 
 def graphql(query: str, variables: dict) -> dict:
-    data = request_json(
+    result = request_json(
         "https://api.github.com/graphql",
         {"query": query, "variables": variables},
     )
-    if not isinstance(data, dict):
+    if not isinstance(result, dict):
         raise RuntimeError("GitHub GraphQL returned a non-object response")
-    if data.get("errors"):
-        raise RuntimeError(json.dumps(data["errors"]))
-    return data["data"]
+    if result.get("errors"):
+        raise RuntimeError(json.dumps(result["errors"]))
+    return result["data"]
 
 
 def add_months(value: dt.datetime, months: int) -> dt.datetime:
@@ -75,12 +64,30 @@ def uptime_string(now: dt.datetime | None = None) -> str:
     while add_months(cursor, months + 1) <= now:
         months += 1
     cursor = add_months(cursor, months)
-
     days = (now - cursor).days
-    return f"{years} years, {months} months, {days} days"
+    return f"{years}yrs, {months} months, {days}days"
 
 
-def repository_overview() -> tuple[str, str, list[dict]]:
+def existing_value(element_id: str, default: int | str) -> int | str:
+    pattern = re.compile(
+        rf'<tspan[^>]*id="{re.escape(element_id)}"[^>]*>(.*?)</tspan>',
+        re.DOTALL,
+    )
+    for path in SVG_FILES:
+        if not path.exists():
+            continue
+        match = pattern.search(path.read_text(encoding="utf-8"))
+        if not match:
+            continue
+        raw = re.sub(r"<[^>]+>", "", match.group(1)).strip()
+        number = re.sub(r"[^0-9-]", "", raw)
+        if isinstance(default, int) and number:
+            return int(number)
+        return raw or default
+    return default
+
+
+def repository_overview() -> tuple[str, str, list[dict], int]:
     query = """
     query($login: String!) {
       user(login: $login) {
@@ -89,6 +96,7 @@ def repository_overview() -> tuple[str, str, list[dict]]:
         repositories(
           first: 100
           ownerAffiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER]
+          privacy: PUBLIC
         ) {
           totalCount
           nodes {
@@ -101,8 +109,36 @@ def repository_overview() -> tuple[str, str, list[dict]]:
       }
     }
     """
-    data = graphql(query, {"login": USERNAME})["user"]
-    return data["id"], data["createdAt"], data["repositories"]["nodes"]
+    user = graphql(query, {"login": USERNAME})["user"]
+    repos = user["repositories"]
+    return user["id"], user["createdAt"], repos["nodes"], int(repos["totalCount"])
+
+
+def annual_contributions() -> int | None:
+    if not TOKEN:
+        return None
+    now = dt.datetime.now(dt.timezone.utc)
+    query = """
+    query($login: String!, $from: DateTime!, $to: DateTime!) {
+      user(login: $login) {
+        contributionsCollection(from: $from, to: $to) {
+          contributionCalendar { totalContributions }
+        }
+      }
+    }
+    """
+    data = graphql(
+        query,
+        {
+            "login": USERNAME,
+            "from": (now - dt.timedelta(days=365)).isoformat(),
+            "to": now.isoformat(),
+        },
+    )
+    return int(
+        data["user"]["contributionsCollection"]
+        ["contributionCalendar"]["totalContributions"]
+    )
 
 
 def commit_and_loc_for_repo(owner: str, name: str, user_id: str) -> tuple[int, int, int]:
@@ -113,10 +149,7 @@ def commit_and_loc_for_repo(owner: str, name: str, user_id: str) -> tuple[int, i
           target {
             ... on Commit {
               history(first: 100, after: $cursor, author: {id: $author}) {
-                nodes {
-                  additions
-                  deletions
-                }
+                nodes { additions deletions }
                 pageInfo { hasNextPage endCursor }
               }
             }
@@ -128,13 +161,13 @@ def commit_and_loc_for_repo(owner: str, name: str, user_id: str) -> tuple[int, i
     cursor = None
     commits = additions = deletions = 0
     while True:
-        data = graphql(
+        repo = graphql(
             query,
             {"owner": owner, "name": name, "cursor": cursor, "author": user_id},
         )["repository"]
-        if not data or not data.get("defaultBranchRef"):
+        if not repo or not repo.get("defaultBranchRef"):
             return commits, additions, deletions
-        history = data["defaultBranchRef"]["target"]["history"]
+        history = repo["defaultBranchRef"]["target"]["history"]
         for node in history["nodes"]:
             commits += 1
             additions += int(node.get("additions") or 0)
@@ -144,144 +177,110 @@ def commit_and_loc_for_repo(owner: str, name: str, user_id: str) -> tuple[int, i
         cursor = history["pageInfo"]["endCursor"]
 
 
-def collect_stats() -> dict[str, int | str]:
-    values: dict[str, int | str] = dict(FALLBACK)
+def collect_stats() -> dict[str, int | str | None]:
+    values: dict[str, int | str | None] = {
+        "repos": existing_value("repo_data", 12),
+        "contributed": existing_value("contrib_data", 12),
+        "stars": existing_value("star_data", 0),
+        "commits": existing_value("commit_data", 233),
+        "followers": existing_value("follower_data", 0),
+        "loc_add": existing_value("loc_add", 288353),
+        "loc_del": existing_value("loc_del", 68804),
+        "loc_net": existing_value("loc_data", 219549),
+        "since": existing_value("since_data", "2016"),
+        "annual_contributions": None,
+    }
+
     try:
-        user_id, created_at, repositories = repository_overview()
-        owned = [
-            repo for repo in repositories
-            if repo["owner"]["login"].casefold() == USERNAME.casefold()
-        ]
-        values["repos"] = len(owned)
-        values["contributed"] = len(repositories)
-        values["stars"] = sum(int(repo["stargazerCount"]) for repo in owned)
+        profile = request_json(f"https://api.github.com/users/{USERNAME}")
+        if isinstance(profile, dict):
+            values["repos"] = int(profile.get("public_repos", values["repos"]))
+            values["followers"] = int(profile.get("followers", values["followers"]))
+            created_at = str(profile.get("created_at", ""))
+            if created_at:
+                values["since"] = created_at[:4]
+    except Exception as exc:
+        print(f"Public profile lookup failed: {exc}")
+
+    try:
+        user_id, created_at, repositories, affiliated_count = repository_overview()
+        values["contributed"] = affiliated_count
+        values["stars"] = sum(int(repo.get("stargazerCount") or 0) for repo in repositories)
         values["since"] = created_at[:4]
 
         commit_total = addition_total = deletion_total = 0
         for repo in repositories:
             if not repo.get("defaultBranchRef"):
                 continue
-            commits, additions, deletions = commit_and_loc_for_repo(
-                repo["owner"]["login"], repo["name"], user_id
-            )
+            try:
+                commits, additions, deletions = commit_and_loc_for_repo(
+                    repo["owner"]["login"], repo["name"], user_id
+                )
+            except Exception as exc:
+                print(f"Skipping {repo['owner']['login']}/{repo['name']}: {exc}")
+                continue
             commit_total += commits
             addition_total += additions
             deletion_total += deletions
 
-        values["commits"] = commit_total
-        values["loc_add"] = addition_total
-        values["loc_del"] = deletion_total
-        values["loc_net"] = addition_total - deletion_total
+        if commit_total or addition_total or deletion_total:
+            values["commits"] = commit_total
+            values["loc_add"] = addition_total
+            values["loc_del"] = deletion_total
+            values["loc_net"] = addition_total - deletion_total
     except Exception as exc:
-        print(f"Using fallback GitHub statistics: {exc}")
+        print(f"Repository statistics lookup failed: {exc}")
+
+    try:
+        values["annual_contributions"] = annual_contributions()
+    except Exception as exc:
+        print(f"Annual contribution lookup failed: {exc}")
 
     values["uptime"] = uptime_string()
     values["updated"] = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
     return values
 
 
-def fmt(value: int | str) -> str:
-    return f"{value:,}" if isinstance(value, int) else str(value)
-
-
-def field(y: int, label: str, value: str, dots: int) -> str:
-    return (
-        f'<tspan x="{DETAIL_X}" y="{y}" class="cc">. </tspan>'
-        f'<tspan class="key">{escape(label)}</tspan>:'
-        f'<tspan class="cc"> {"." * dots} </tspan>'
-        f'<tspan class="value">{escape(value)}</tspan>'
+def replace_id(text: str, element_id: str, value: str) -> str:
+    pattern = re.compile(
+        rf'(<tspan[^>]*id="{re.escape(element_id)}"[^>]*>)(.*?)(</tspan>)',
+        re.DOTALL,
     )
+    updated, count = pattern.subn(rf"\g<1>{value}\g<3>", text, count=1)
+    if count != 1:
+        raise RuntimeError(f"Expected exactly one {element_id} element")
+    return updated
 
 
-def build_light_svg(values: dict[str, int | str]) -> str:
-    portrait = (ROOT / "portrait_light.txt").read_text(encoding="utf-8").splitlines()
-    if len(portrait) != 36 or max(map(len, portrait)) != 50:
-        raise ValueError("portrait_light.txt must remain 36 rows with a 50-character maximum")
-
-    row_step = 480 / (len(portrait) - 1)
-    portrait_rows = "".join(
-        f'<tspan x="18" y="{30 + index * row_step:.2f}">{escape(line)}</tspan>'
-        for index, line in enumerate(portrait)
-    )
-
-    details = [
-        f'<tspan x="{DETAIL_X}" y="30">corbin@nebulazer -{"—" * 35}-</tspan>',
-        field(50, "OS", "macOS, Windows", 15),
-        field(70, "Uptime", str(values["uptime"]), 4),
-        field(90, "Host", "Handshake AI", 18),
-        field(110, "Title", "AI fellow, Researcher, builder", 8),
-        field(130, "IDE", "Codex, VS Code", 14),
-        f'<tspan x="{DETAIL_X}" y="150" class="cc">. </tspan>',
-        field(170, "Aspiring Role", "Forward Development Engineer", 2),
-        field(190, "Languages.Programming", "Python, C++", 4),
-        field(210, "Tools", "Codex, Git, GitHub, APIs, MCP", 8),
-        f'<tspan x="{DETAIL_X}" y="230" class="cc">. </tspan>',
-        field(250, "Focus", "Multi-agent orchestration", 9),
-        field(270, "Building", "SKILLS.md, Methodology Frameworks", 2),
-        field(290, "Hobbies.Software", "AI systems, automation, PKM", 3),
-        field(310, "Hobbies.Hardware", "PC building, engine tuning", 3),
-        field(330, "Lifestyle Hobbies", "Strength training, kickboxing", 2),
-        f'<tspan x="{DETAIL_X}" y="350">- Contact -{"—" * 32}-</tspan>',
-        field(370, "Email.Work", "thecorbinfloyd@gmail.com", 6),
-        field(390, "LinkedIn", "corbin-floyd-000b22275", 9),
-        f'<tspan x="{DETAIL_X}" y="410">- GitHub Stats -{"—" * 27}-</tspan>',
-        (
-            f'<tspan x="{DETAIL_X}" y="430" class="cc">. </tspan>'
-            f'<tspan class="key">Repos</tspan>:<tspan class="cc"> ... </tspan>'
-            f'<tspan class="value" id="repo_data">{fmt(values["repos"])}</tspan> '
-            f'{{<tspan class="key">Contributed</tspan>: '
-            f'<tspan class="value" id="contrib_data">{fmt(values["contributed"])}</tspan>}} '
-            f'| <tspan class="key">Stars</tspan>:<tspan class="cc"> ... </tspan>'
-            f'<tspan class="value" id="star_data">{fmt(values["stars"])}</tspan>'
-        ),
-        (
-            f'<tspan x="{DETAIL_X}" y="450" class="cc">. </tspan>'
-            f'<tspan class="key">Commits</tspan>:<tspan class="cc"> .......... </tspan>'
-            f'<tspan class="value" id="commit_data">{fmt(values["commits"])}</tspan> '
-            f'| <tspan class="key">Since</tspan>:<tspan class="cc"> ... </tspan>'
-            f'<tspan class="value" id="since_data">{fmt(values["since"])}</tspan>'
-        ),
-        (
-            f'<tspan x="{DETAIL_X}" y="470" class="cc">. </tspan>'
-            f'<tspan class="key">Lines of Code on GitHub</tspan>:'
-            f'<tspan class="cc">. </tspan>'
-            f'<tspan class="value" id="loc_data">{fmt(values["loc_net"])}</tspan> '
-            f'( <tspan class="addColor" id="loc_add">{fmt(values["loc_add"])}</tspan>'
-            f'<tspan class="addColor">++</tspan>, '
-            f'<tspan class="delColor" id="loc_del">{fmt(values["loc_del"])}</tspan>'
-            f'<tspan class="delColor">--</tspan> )'
-        ),
-        field(490, "Projects", "Agentelligence, Skill-Finder", 8),
-        field(510, "Updated", str(values["updated"]), 19),
-    ]
-
-    return f'''<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="985" height="530" viewBox="0 0 985 530" role="img" aria-labelledby="title desc">
-<title id="title">Corbin Floyd GitHub profile card - light mode</title>
-<desc id="desc">Light-mode ASCII portrait and terminal-style profile details.</desc>
-<style>
-@font-face {{
-  src: local('SF Mono'), local('Menlo'), local('Consolas');
-  font-family: 'ProfileMono';
-  font-display: swap;
-}}
-.key {{fill:#953800;}}
-.value {{fill:#0a3069;}}
-.addColor {{fill:#1a7f37;}}
-.delColor {{fill:#cf222e;}}
-.cc {{fill:#a8b2bf;}}
-text,tspan {{white-space:pre;font-variant-ligatures:none;}}
-</style>
-<rect x="0.5" y="0.5" width="984" height="529" fill="#f6f8fa" stroke="#d0d7de" rx="15"/>
-<text x="18" y="30" fill="#24292f" xml:space="preserve" font-family="ProfileMono,'SF Mono',Menlo,Monaco,Consolas,'Liberation Mono',monospace" font-size="12.9px" font-weight="500" stroke="#24292f" stroke-width="0.20" paint-order="stroke fill" text-rendering="geometricPrecision">{portrait_rows}</text>
-<text x="{DETAIL_X}" y="30" fill="#24292f" xml:space="preserve" font-family="ProfileMono,'SF Mono',Menlo,Monaco,Consolas,'Liberation Mono',monospace" font-size="15px" font-weight="500">{"".join(details)}</text>
-</svg>'''
+def update_svg(path: Path, values: dict[str, int | str | None]) -> None:
+    text = path.read_text(encoding="utf-8")
+    replacements = {
+        "uptime_data": str(values["uptime"]),
+        "repo_data": f"{int(values['repos']):d}",
+        "contrib_data": f"{int(values['contributed']):5d}",
+        "star_data": f"{int(values['stars']):d}",
+        "commit_data": f"{int(values['commits']):5d}",
+        "follower_data": f"{int(values['followers']):d}",
+        "loc_data": f"  {int(values['loc_net']):,} ",
+        "loc_add": f" ({int(values['loc_add']):,}++",
+        "loc_del": f"  {int(values['loc_del']):,}--",
+        "updated_data": str(values["updated"]),
+        "since_data": str(values["since"]),
+    }
+    for element_id, value in replacements.items():
+        text = replace_id(text, element_id, value)
+    path.write_text(text, encoding="utf-8")
 
 
 def main() -> None:
     values = collect_stats()
-    (ROOT / "light_mode.svg").write_text(build_light_svg(values), encoding="utf-8")
+    for svg in SVG_FILES:
+        update_svg(svg, values)
     print(json.dumps(values, indent=2))
+    print(
+        "Note: 'Contributed' is the Andrew-style count of public affiliated "
+        "repositories. annual_contributions is the rolling 365-day activity count."
+    )
 
 
 if __name__ == "__main__":
