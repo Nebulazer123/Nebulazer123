@@ -4,6 +4,14 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "17 9 * * *"
+  push:
+    branches:
+      - main
+    paths:
+      - "portrait_light.txt"
+      - "portrait_dark.txt"
+      - "today.py"
+      - ".github/workflows/update-profile.yml"
 
 permissions:
   contents: write
@@ -17,7 +25,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.x"
-      - name: Refresh profile statistics
+      - name: Build both themes and refresh profile statistics
         run: python today.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
