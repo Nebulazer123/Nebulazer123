@@ -1,16 +1,20 @@
 from __future__ import annotations
 
+import calendar
 import datetime as dt
 import json
 import os
 import urllib.request
 from html import escape
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 USERNAME = "Nebulazer123"
 ROOT = Path(__file__).resolve().parent
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
 DETAIL_X = 430
+LOCAL_TZ = ZoneInfo("America/Chicago")
+BIRTH_TIME = dt.datetime(2003, 7, 21, 3, 0, tzinfo=LOCAL_TZ)
 
 FALLBACK = {
     "repos": "11",
@@ -18,6 +22,7 @@ FALLBACK = {
     "contribs": "331",
     "since": "2016",
     "pinned": "2",
+    "uptime": "22yrs, 11mos, 19days",
 }
 
 THEMES = {
@@ -72,8 +77,34 @@ def count_paginated(url: str) -> int:
         page += 1
 
 
+def add_calendar(base: dt.datetime, *, years: int = 0, months: int = 0) -> dt.datetime:
+    month_index = (base.year + years) * 12 + (base.month - 1) + months
+    year, month_zero = divmod(month_index, 12)
+    month = month_zero + 1
+    day = min(base.day, calendar.monthrange(year, month)[1])
+    return base.replace(year=year, month=month, day=day)
+
+
+def format_uptime(now: dt.datetime | None = None) -> str:
+    current = (now or dt.datetime.now(dt.timezone.utc)).astimezone(LOCAL_TZ)
+
+    years = current.year - BIRTH_TIME.year
+    if add_calendar(BIRTH_TIME, years=years) > current:
+        years -= 1
+
+    after_years = add_calendar(BIRTH_TIME, years=years)
+    months = (current.year - after_years.year) * 12 + current.month - after_years.month
+    if add_calendar(after_years, months=months) > current:
+        months -= 1
+
+    after_months = add_calendar(after_years, months=months)
+    days = (current - after_months).days
+    return f"{years}yrs, {months}mos, {days}days"
+
+
 def collect_stats() -> dict[str, str]:
     values = dict(FALLBACK)
+    values["uptime"] = format_uptime()
     try:
         profile = request_json(f"https://api.github.com/users/{USERNAME}")
         if isinstance(profile, dict):
@@ -146,11 +177,11 @@ def build_svg(theme: dict[str, str], values: dict[str, str]) -> str:
     details = [
         f'<tspan x="{DETAIL_X}" y="30">corbin@nebulazer -{"—" * 36}-</tspan>',
         field(50, "OS", "macOS, Windows", 14),
-        field(70, "Host.Mac", "M4 Pro, 24 GB", 10),
-        field(90, "Host.PC", "i7-9700, RTX 2080S, 32 GB", 7),
-        field(110, "Title", "AI fellow, researcher, builder", 8),
-        field(130, "IDE", "Codex, VS Code", 13),
-        f'<tspan x="{DETAIL_X}" y="150" class="cc">. </tspan>',
+        field(70, "Uptime", values["uptime"], 5),
+        field(90, "Host.Mac", "M4 Pro, 24 GB", 10),
+        field(110, "Host.PC", "i7-9700, RTX 2080S, 32 GB", 7),
+        field(130, "Title", "AI fellow, researcher, builder", 8),
+        field(150, "IDE", "Codex, VS Code", 13),
         field(170, "Languages.Programming", "Python, C++", 3),
         field(190, "Tools", "Codex, Git, GitHub, APIs, MCP", 8),
         field(210, "Focus", "Multi-agent orchestration", 8),
